@@ -1,12 +1,554 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rubik's Cube Solver</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rubik's Cube Solver</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+:root{--bg:#0a0a0f;--surface:#13131a;--border:#2a2a3a;--accent:#00ffcc;--accent2:#ff6b35;--text:#e8e8f0;--muted:#666680;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(0,255,204,.06) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(255,107,53,.05) 0%,transparent 60%);pointer-events:none;z-index:0;}
+header{padding:16px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:relative;z-index:1;}
+.logo{width:28px;height:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;flex-shrink:0;}
+.logo-cell{border-radius:2px;}
+h1{font-size:18px;font-weight:800;letter-spacing:-.5px;}
+h1 span{color:var(--accent);}
+.tag{margin-left:auto;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);border:1px solid var(--border);padding:3px 9px;border-radius:20px;}
+.main-layout{display:grid;grid-template-columns:1fr 340px;height:calc(100vh - 57px);position:relative;z-index:1;}
+.viewer-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;}
+#canvas-container{flex:1;position:relative;overflow:hidden;}
+canvas{display:block;}
+.viewer-footer{padding:9px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.move-display{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.move-display span{color:var(--accent);font-weight:700;}
+.right-panel{display:flex;flex-direction:column;overflow:hidden;}
+.tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:12px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-content{display:none;flex:1;overflow-y:auto;padding:16px;flex-direction:column;gap:12px;}
+.tab-content.active{display:flex;}
+.section-title{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-family:'Space Mono',monospace;margin-bottom:6px;}
+.palette{display:flex;gap:7px;flex-wrap:wrap;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);}
+.color-btn{width:36px;height:36px;border-radius:7px;border:2px solid transparent;cursor:pointer;transition:all .15s;}
+.color-btn:hover{transform:scale(1.1);}
+.color-btn.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.4);}
+.faces-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.face-label-sm{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;text-align:center;}
+.face-grid-sm{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.sticker{aspect-ratio:1;border-radius:3px;cursor:pointer;border:1px solid rgba(255,255,255,.1);transition:all .12s;}
+.sticker:hover{transform:scale(1.15);border-color:#fff;}
+.btn-primary{background:var(--accent);color:#000;border:none;padding:12px 20px;border-radius:8px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;cursor:pointer;width:100%;transition:all .2s;}
+.btn-primary:hover{background:#00e6b8;box-shadow:0 6px 20px rgba(0,255,204,.3);transform:translateY(-1px);}
+.btn-primary:active{transform:translateY(0);}
+.btn-primary:disabled{background:var(--border);color:var(--muted);transform:none;box-shadow:none;cursor:not-allowed;}
+.btn-secondary{background:transparent;color:var(--muted);border:1px solid var(--border);padding:9px 16px;border-radius:8px;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;width:100%;}
+.btn-secondary:hover{border-color:var(--accent2);color:var(--accent2);}
+.btn-sm{background:transparent;color:var(--accent2);border:1px solid var(--accent2);padding:6px 12px;border-radius:6px;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-sm:hover{background:rgba(255,107,53,.1);}
+.solution-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;min-height:64px;display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;}
+.move-chip{background:var(--bg);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;}
+.move-chip.current{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
+.move-chip.done{opacity:.25;}
+.status-msg{color:var(--muted);font-size:11px;font-family:'Space Mono',monospace;}
+.status-msg.error{color:#ff6b6b;}
+.status-msg.success{color:var(--accent);}
+.playback-row{display:flex;gap:6px;}
+.ctrl-btn{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px;border-radius:7px;cursor:pointer;font-size:14px;transition:all .2s;}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent);}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted);}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);width:0%;transition:width .3s;}
+.info-row{display:flex;justify-content:space-between;align-items:center;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.info-row strong{color:var(--text);}
+.row-flex{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,255,204,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
 </head>
 <body>
-    <h1>Welcome to the Rubik's Cube Solver!</h1>
-    <p>This page will help you solve your Rubik's Cube.</p>
+<header>
+  <div class="logo" id="headerLogo"></div>
+  <h1>Rubik's <span>Solver</span></h1>
+  <div class="tag">WebGL · Non-blocking</div>
+</header>
+<div class="main-layout">
+  <div class="viewer-panel">
+    <div id="canvas-container"></div>
+    <div class="viewer-footer">
+      <div class="move-display" id="moveDisplay">Drag to rotate · Scramble &amp; Solve</div>
+      <div id="stepCounter" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+  </div>
+  <div class="right-panel">
+    <div class="tabs">
+      <button class="tab active" id="tab-btn-input" onclick="switchTab('input')">🎨 Colors</button>
+      <button class="tab" id="tab-btn-solve" onclick="switchTab('solve')">⚡ Solve</button>
+    </div>
+    <div class="tab-content active" id="tab-input">
+      <div>
+        <div class="section-title">Active Color</div>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div class="row-flex">
+        <div class="section-title" style="margin:0">Sticker Grid</div>
+        <button class="btn-sm" onclick="scrambleCube()">⚡ Scramble</button>
+      </div>
+      <div class="faces-wrap" id="face-inputs"></div>
+      <button class="btn-secondary" onclick="resetCube()">↺ Reset to Solved</button>
+    </div>
+    <div class="tab-content" id="tab-solve">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <button class="btn-primary" id="solveBtn" onclick="solveCube()">▶ Solve Cube</button>
+      <div>
+        <div class="section-title">Solution Moves</div>
+        <div class="solution-box" id="solutionMoves">
+          <span class="status-msg">Press Solve to generate moves</span>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Playback</div>
+        <div class="playback-row">
+          <button class="ctrl-btn" id="btnPrev" onclick="stepMove(-1)" disabled>◀</button>
+          <button class="ctrl-btn" id="btnPlay" onclick="togglePlay()" disabled>▶</button>
+          <button class="ctrl-btn" id="btnNext" onclick="stepMove(1)" disabled>▶|</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="info-row"><span>Total Moves</span><strong id="moveCount">—</strong></div>
+        <div class="info-row"><span>Progress</span><strong id="progressText">—</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  CUBE STATE
+// ═══════════════════════════════════════════════
+const FACES = ['U','R','F','D','L','B'];
+const COLORS = {
+  U:{hex:'#ffffff',name:'White'},
+  R:{hex:'#06d6a0',name:'Green'},
+  F:{hex:'#e63946',name:'Red'},
+  D:{hex:'#f5d800',name:'Yellow'},
+  L:{hex:'#2463eb',name:'Blue'},
+  B:{hex:'#f77f00',name:'Orange'},
+};
+
+let cubeState={};
+function initState(){FACES.forEach(f=>{cubeState[f]=Array(9).fill(f);});}
+initState();
+
+let selectedColor='F';
+let currentSolution=[];
+let currentStep=0;
+let isPlaying=false;
+let playInterval=null;
+let savedBeforeSolve=null;
+let solverWorker=null;
+
+// ═══════════════════════════════════════════════
+//  HEADER LOGO
+// ═══════════════════════════════════════════════
+(function(){
+  const logo=document.getElementById('headerLogo');
+  ['#e63946','#f5d800','#06d6a0','#ffffff','#2463eb','#e63946','#f77f00','#06d6a0','#f5d800'].forEach(c=>{
+    const d=document.createElement('div');
+    d.className='logo-cell';d.style.background=c;logo.appendChild(d);
+  });
+})();
+
+// ═══════════════════════════════════════════════
+//  UI BUILDERS
+// ═══════════════════════════════════════════════
+function buildPalette(){
+  const p=document.getElementById('palette');p.innerHTML='';
+  FACES.forEach(f=>{
+    const btn=document.createElement('button');
+    btn.className='color-btn'+(f===selectedColor?' active':'');
+    btn.style.background=COLORS[f].hex;btn.title=COLORS[f].name;
+    btn.onclick=()=>{selectedColor=f;buildPalette();};
+    p.appendChild(btn);
+  });
+}
+
+function buildFaceInputs(){
+  const c=document.getElementById('face-inputs');c.innerHTML='';
+  const labels={U:'Top',R:'Right',F:'Front',D:'Bottom',L:'Left',B:'Back'};
+  FACES.forEach(face=>{
+    const block=document.createElement('div');
+    const lbl=document.createElement('div');
+    lbl.className='face-label-sm';lbl.textContent=labels[face];block.appendChild(lbl);
+    const grid=document.createElement('div');grid.className='face-grid-sm';
+    cubeState[face].forEach((color,i)=>{
+      const s=document.createElement('div');
+      s.className='sticker';s.style.background=COLORS[color].hex;
+      s.onclick=()=>{cubeState[face][i]=selectedColor;buildFaceInputs();updateCubeColors();};
+      grid.appendChild(s);
+    });
+    block.appendChild(grid);c.appendChild(block);
+  });
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-btn-'+name).classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+buildPalette();buildFaceInputs();
+
+// ═══════════════════════════════════════════════
+//  THREE.JS 3D CUBE
+// ═══════════════════════════════════════════════
+const container=document.getElementById('canvas-container');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a0a0f);
+const camera=new THREE.PerspectiveCamera(45,1,.1,100);
+camera.position.set(4.5,4,6);camera.lookAt(0,0,0);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+container.appendChild(renderer.domElement);
+
+function resize(){
+  const w=container.clientWidth,h=container.clientHeight;
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(container);resize();
+
+scene.add(new THREE.AmbientLight(0xffffff,.8));
+const dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(5,8,5);scene.add(dl);
+const dl2=new THREE.DirectionalLight(0x88ffee,.25);dl2.position.set(-5,-3,-5);scene.add(dl2);
+
+let isDragging=false,prevMouse={x:0,y:0};
+let rotX=0.45,rotY=0.6;
+const cubeGroup=new THREE.Group();scene.add(cubeGroup);
+
+renderer.domElement.addEventListener('mousedown',e=>{isDragging=true;prevMouse={x:e.clientX,y:e.clientY};});
+window.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  rotY+=(e.clientX-prevMouse.x)*.012;
+  rotX+=(e.clientY-prevMouse.y)*.012;
+  rotX=Math.max(-1.3,Math.min(1.3,rotX));
+  prevMouse={x:e.clientX,y:e.clientY};
+});
+window.addEventListener('mouseup',()=>isDragging=false);
+renderer.domElement.addEventListener('touchstart',e=>{isDragging=true;prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(!isDragging)return;
+  rotY+=(e.touches[0].clientX-prevMouse.x)*.012;
+  rotX+=(e.touches[0].clientY-prevMouse.y)*.012;
+  prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+window.addEventListener('touchend',()=>isDragging=false);
+
+const cubies=[];
+const GAP=1.06;
+
+function buildCube(){
+  while(cubeGroup.children.length)cubeGroup.remove(cubeGroup.children[0]);
+  cubies.length=0;
+  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+    if(x===0&&y===0&&z===0)continue;
+    const geo=new THREE.BoxGeometry(.94,.94,.94);
+    const mats=Array(6).fill(null).map(()=>new THREE.MeshLambertMaterial({color:0x111118}));
+    const mesh=new THREE.Mesh(geo,mats);
+    mesh.position.set(x*GAP,y*GAP,z*GAP);
+    mesh.userData={gx:x,gy:y,gz:z};
+    cubeGroup.add(mesh);cubies.push(mesh);
+  }
+  updateCubeColors();
+}
+
+function hexNum(f){return parseInt(COLORS[f].hex.replace('#',''),16);}
+
+function updateCubeColors(){
+  cubies.forEach(c=>c.material.forEach(m=>m.color.set(0x111118)));
+  const maps={
+    U:{fix:'gy',val:1, mat:2,coord:(i)=>({gx:(i%3)-1,gz:Math.floor(i/3)-1})},
+    D:{fix:'gy',val:-1,mat:3,coord:(i)=>({gx:(i%3)-1,gz:-(Math.floor(i/3)-1)})},
+    F:{fix:'gz',val:1, mat:4,coord:(i)=>({gx:(i%3)-1,gy:-(Math.floor(i/3)-1)})},
+    B:{fix:'gz',val:-1,mat:5,coord:(i)=>({gx:-(i%3-1),gy:-(Math.floor(i/3)-1)})},
+    R:{fix:'gx',val:1, mat:0,coord:(i)=>({gz:-(i%3-1),gy:-(Math.floor(i/3)-1)})},
+    L:{fix:'gx',val:-1,mat:1,coord:(i)=>({gz:(i%3)-1,gy:-(Math.floor(i/3)-1)})},
+  };
+  FACES.forEach(face=>{
+    const m=maps[face];
+    cubeState[face].forEach((colorCode,i)=>{
+      const pos=m.coord(i);
+      const cubie=cubies.find(c=>{
+        const u=c.userData;
+        if(u[m.fix]!==m.val)return false;
+        return Object.keys(pos).every(k=>u[k]===pos[k]);
+      });
+      if(cubie)cubie.material[m.mat].color.set(hexNum(colorCode));
+    });
+  });
+}
+
+buildCube();
+
+function animate(){
+  requestAnimationFrame(animate);
+  cubeGroup.rotation.x=rotX;cubeGroup.rotation.y=rotY;
+  renderer.render(scene,camera);
+}
+animate();
+
+// ═══════════════════════════════════════════════
+//  CUBE MOVE ENGINE
+// ═══════════════════════════════════════════════
+function applyMove(move){
+  const base=move.replace("'","").replace("2","");
+  const times=move.includes("2")?2:move.includes("'")?3:1;
+  for(let t=0;t<times;t++)_once(base);
+}
+function rotateFaceCW(f){
+  const s=cubeState[f];
+  let t=s[0];s[0]=s[6];s[6]=s[8];s[8]=s[2];s[2]=t;
+  t=s[1];s[1]=s[3];s[3]=s[7];s[7]=s[5];s[5]=t;
+}
+function _once(f){
+  const s=cubeState;rotateFaceCW(f);
+  if(f==='U'){for(let i=0;i<3;i++){const t=s.F[i];s.F[i]=s.R[i];s.R[i]=s.B[i];s.B[i]=s.L[i];s.L[i]=t;}}
+  else if(f==='D'){for(let i=0;i<3;i++){const t=s.F[6+i];s.F[6+i]=s.L[6+i];s.L[6+i]=s.B[6+i];s.B[6+i]=s.R[6+i];s.R[6+i]=t;}}
+  else if(f==='R'){const[a,b,c]=[s.U[2],s.U[5],s.U[8]];s.U[2]=s.F[2];s.U[5]=s.F[5];s.U[8]=s.F[8];s.F[2]=s.D[2];s.F[5]=s.D[5];s.F[8]=s.D[8];s.D[2]=s.B[6];s.D[5]=s.B[3];s.D[8]=s.B[0];s.B[0]=c;s.B[3]=b;s.B[6]=a;}
+  else if(f==='L'){const[a,b,c]=[s.U[0],s.U[3],s.U[6]];s.U[0]=s.B[8];s.U[3]=s.B[5];s.U[6]=s.B[2];s.B[2]=s.D[6];s.B[5]=s.D[3];s.B[8]=s.D[0];s.D[0]=s.F[0];s.D[3]=s.F[3];s.D[6]=s.F[6];s.F[0]=a;s.F[3]=b;s.F[6]=c;}
+  else if(f==='F'){const[a,b,c]=[s.U[6],s.U[7],s.U[8]];s.U[6]=s.L[8];s.U[7]=s.L[5];s.U[8]=s.L[2];s.L[2]=s.D[0];s.L[5]=s.D[1];s.L[8]=s.D[2];s.D[0]=s.R[6];s.D[1]=s.R[3];s.D[2]=s.R[0];s.R[0]=a;s.R[3]=b;s.R[6]=c;}
+  else if(f==='B'){const[a,b,c]=[s.U[0],s.U[1],s.U[2]];s.U[0]=s.R[2];s.U[1]=s.R[5];s.U[2]=s.R[8];s.R[2]=s.D[8];s.R[5]=s.D[7];s.R[8]=s.D[6];s.D[6]=s.L[0];s.D[7]=s.L[3];s.D[8]=s.L[6];s.L[0]=c;s.L[3]=b;s.L[6]=a;}
+}
+function inverseMove(m){if(m.includes("'"))return m.replace("'","");if(m.includes("2"))return m;return m+"'";}
+function isSolved(){return FACES.every(f=>cubeState[f].every(s=>s===f));}
+function cloneState(){const s={};FACES.forEach(f=>{s[f]=[...cubeState[f]];});return s;}
+function restoreState(saved){FACES.forEach(f=>{cubeState[f]=[...saved[f]];});}
+
+const ALL_MOVES=['U',"U'","U2",'R',"R'","R2",'F',"F'","F2",'D',"D'","D2",'L',"L'","L2",'B',"B'","B2"];
+
+// ═══════════════════════════════════════════════
+//  WEB WORKER (inline blob) — runs solver off-thread
+// ═══════════════════════════════════════════════
+const WORKER_CODE = `
+const FACES=['U','R','F','D','L','B'];
+const ALL_MOVES=['U',"U'","U2",'R',"R'",'R2','F',"F'",'F2','D',"D'",'D2','L',"L'",'L2','B',"B'",'B2'];
+const SOLVED_KEY=FACES.map(f=>Array(9).fill(f).join('')).join('');
+
+let state={};
+
+function initState(){FACES.forEach(f=>{state[f]=Array(9).fill(f);});}
+function rotateFaceCW(f){
+  const s=state[f];
+  let t=s[0];s[0]=s[6];s[6]=s[8];s[8]=s[2];s[2]=t;
+  t=s[1];s[1]=s[3];s[3]=s[7];s[7]=s[5];s[5]=t;
+}
+function _once(f){
+  const s=state;rotateFaceCW(f);
+  if(f==='U'){for(let i=0;i<3;i++){const t=s.F[i];s.F[i]=s.R[i];s.R[i]=s.B[i];s.B[i]=s.L[i];s.L[i]=t;}}
+  else if(f==='D'){for(let i=0;i<3;i++){const t=s.F[6+i];s.F[6+i]=s.L[6+i];s.L[6+i]=s.B[6+i];s.B[6+i]=s.R[6+i];s.R[6+i]=t;}}
+  else if(f==='R'){const[a,b,c]=[s.U[2],s.U[5],s.U[8]];s.U[2]=s.F[2];s.U[5]=s.F[5];s.U[8]=s.F[8];s.F[2]=s.D[2];s.F[5]=s.D[5];s.F[8]=s.D[8];s.D[2]=s.B[6];s.D[5]=s.B[3];s.D[8]=s.B[0];s.B[0]=c;s.B[3]=b;s.B[6]=a;}
+  else if(f==='L'){const[a,b,c]=[s.U[0],s.U[3],s.U[6]];s.U[0]=s.B[8];s.U[3]=s.B[5];s.U[6]=s.B[2];s.B[2]=s.D[6];s.B[5]=s.D[3];s.B[8]=s.D[0];s.D[0]=s.F[0];s.D[3]=s.F[3];s.D[6]=s.F[6];s.F[0]=a;s.F[3]=b;s.F[6]=c;}
+  else if(f==='F'){const[a,b,c]=[s.U[6],s.U[7],s.U[8]];s.U[6]=s.L[8];s.U[7]=s.L[5];s.U[8]=s.L[2];s.L[2]=s.D[0];s.L[5]=s.D[1];s.L[8]=s.D[2];s.D[0]=s.R[6];s.D[1]=s.R[3];s.D[2]=s.R[0];s.R[0]=a;s.R[3]=b;s.R[6]=c;}
+  else if(f==='B'){const[a,b,c]=[s.U[0],s.U[1],s.U[2]];s.U[0]=s.R[2];s.U[1]=s.R[5];s.U[2]=s.R[8];s.R[2]=s.D[8];s.R[5]=s.D[7];s.R[8]=s.D[6];s.D[6]=s.L[0];s.D[7]=s.L[3];s.D[8]=s.L[6];s.L[0]=c;s.L[3]=b;s.L[6]=a;}
+}
+function applyMove(move){
+  const base=move.replace("'","").replace("2","");
+  const times=move.includes("2")?2:move.includes("'")?3:1;
+  for(let t=0;t<times;t++)_once(base);
+}
+function inverseMove(m){if(m.includes("'"))return m.replace("'","");if(m.includes("2"))return m;return m+"'";}
+function stateKey(){return FACES.map(f=>state[f].join('')).join('');}
+function cloneSt(){const s={};FACES.forEach(f=>{s[f]=[...state[f]];});return s;}
+function restoreSt(saved){FACES.forEach(f=>{state[f]=[...saved[f]];});}
+
+function solve(inputState, maxDepth){
+  FACES.forEach(f=>{state[f]=[...inputState[f]];});
+  if(stateKey()===SOLVED_KEY) return [];
+  let result=null;
+  function dfs(depth,path,lastBase){
+    if(result)return;
+    if(stateKey()===SOLVED_KEY){result=[...path];return;}
+    if(depth===0)return;
+    for(const move of ALL_MOVES){
+      if(result)return;
+      const base=move.replace("'","").replace("2","");
+      if(base===lastBase)continue;
+      applyMove(move);path.push(move);
+      dfs(depth-1,path,base);
+      path.pop();applyMove(inverseMove(move));
+    }
+  }
+  const start=cloneSt();
+  for(let d=1;d<=maxDepth;d++){
+    restoreSt(start);
+    result=null;
+    dfs(d,[],'' );
+    if(result){return result;}
+  }
+  return null;
+}
+
+self.onmessage=function(e){
+  const{type,state:inputState,maxDepth}=e.data;
+  if(type==='solve'){
+    const solution=solve(inputState,maxDepth||20);
+    self.postMessage({type:'result',solution});
+  }
+};
+`;
+
+function createWorker(){
+  const blob=new Blob([WORKER_CODE],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  return new Worker(url);
+}
+
+// ═══════════════════════════════════════════════
+//  SCRAMBLE / RESET
+// ═══════════════════════════════════════════════
+function scrambleCube(){
+  stopPlay();initState();
+  const sc=[];let lastBase='';
+  for(let i=0;i<20;i++){
+    let m;
+    do{m=ALL_MOVES[Math.floor(Math.random()*ALL_MOVES.length)];}
+    while(m.replace("'","").replace("2","")===lastBase);
+    sc.push(m);lastBase=m.replace("'","").replace("2","");
+    applyMove(m);
+  }
+  buildFaceInputs();updateCubeColors();
+  document.getElementById('moveDisplay').innerHTML='Scramble: <span>'+sc.join(' ')+'</span>';
+  clearSolution();
+}
+
+function resetCube(){
+  stopPlay();initState();buildFaceInputs();updateCubeColors();
+  document.getElementById('moveDisplay').textContent='Drag to rotate · Scramble & Solve';
+  clearSolution();
+}
+
+function clearSolution(){
+  currentSolution=[];currentStep=0;savedBeforeSolve=null;
+  document.getElementById('solutionMoves').innerHTML='<span class="status-msg">Press Solve to generate moves</span>';
+  document.getElementById('btnPlay').disabled=true;
+  document.getElementById('btnPrev').disabled=true;
+  document.getElementById('btnNext').disabled=true;
+  document.getElementById('moveCount').textContent='—';
+  document.getElementById('progressText').textContent='—';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('stepCounter').textContent='';
+}
+
+function stopPlay(){
+  if(isPlaying){isPlaying=false;clearInterval(playInterval);document.getElementById('btnPlay').textContent='▶';}
+}
+
+// ═══════════════════════════════════════════════
+//  SOLVE — uses Web Worker, page never freezes
+// ═══════════════════════════════════════════════
+function solveCube(){
+  if(isSolved()){
+    document.getElementById('solutionMoves').innerHTML='<span class="status-msg success">✓ Already solved!</span>';
+    return;
+  }
+  savedBeforeSolve=cloneState();
+  const btn=document.getElementById('solveBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Solving…';
+  document.getElementById('solutionMoves').innerHTML='<span class="status-msg"><span class="spinner"></span>Searching for solution…</span>';
+
+  // Kill any previous worker
+  if(solverWorker){solverWorker.terminate();}
+  solverWorker=createWorker();
+
+  solverWorker.onmessage=function(e){
+    const{solution}=e.data;
+    btn.disabled=false;btn.textContent='▶ Solve Cube';
+    solverWorker.terminate();solverWorker=null;
+
+    if(!solution){
+      document.getElementById('solutionMoves').innerHTML='<span class="status-msg error">⚠ No solution found within depth limit. Try using the Scramble button for a guaranteed-solvable state.</span>';
+      savedBeforeSolve=null;return;
+    }
+
+    currentSolution=solution;currentStep=0;
+    renderMoveChips();
+    document.getElementById('moveCount').textContent=solution.length+' moves';
+    document.getElementById('progressText').textContent='0 / '+solution.length;
+    document.getElementById('btnPlay').disabled=false;
+    document.getElementById('btnNext').disabled=false;
+    document.getElementById('btnPrev').disabled=true;
+    document.getElementById('progressFill').style.width='0%';
+    document.getElementById('moveDisplay').innerHTML='Solution ready: <span>'+solution.length+' moves</span>';
+    document.getElementById('stepCounter').textContent='0/'+solution.length;
+  };
+
+  solverWorker.onerror=function(err){
+    btn.disabled=false;btn.textContent='▶ Solve Cube';
+    document.getElementById('solutionMoves').innerHTML='<span class="status-msg error">Worker error: '+err.message+'</span>';
+  };
+
+  // Send cube state to worker (max depth 20 — handles most scrambles)
+  solverWorker.postMessage({type:'solve',state:cloneState(),maxDepth:20});
+}
+
+// ═══════════════════════════════════════════════
+//  PLAYBACK
+// ═══════════════════════════════════════════════
+function renderMoveChips(){
+  const c=document.getElementById('solutionMoves');c.innerHTML='';
+  currentSolution.forEach((m,i)=>{
+    const chip=document.createElement('div');
+    chip.className='move-chip'+(i<currentStep?' done':'')+(i===currentStep?' current':'');
+    chip.textContent=m;chip.onclick=()=>jumpTo(i);
+    c.appendChild(chip);
+  });
+}
+
+function jumpTo(target){
+  if(!savedBeforeSolve)return;
+  restoreState(savedBeforeSolve);
+  for(let i=0;i<target;i++)applyMove(currentSolution[i]);
+  currentStep=target;
+  updateCubeColors();buildFaceInputs();refreshPlaybackUI();
+}
+
+function stepMove(dir){
+  if(!currentSolution.length)return;
+  if(dir===1&&currentStep<currentSolution.length){applyMove(currentSolution[currentStep]);currentStep++;}
+  else if(dir===-1&&currentStep>0){currentStep--;applyMove(inverseMove(currentSolution[currentStep]));}
+  updateCubeColors();buildFaceInputs();refreshPlaybackUI();
+}
+
+function refreshPlaybackUI(){
+  renderMoveChips();
+  document.getElementById('btnPrev').disabled=currentStep===0;
+  document.getElementById('btnNext').disabled=currentStep===currentSolution.length;
+  const pct=currentSolution.length?(currentStep/currentSolution.length*100):0;
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressText').textContent=currentStep+' / '+currentSolution.length;
+  document.getElementById('stepCounter').textContent=currentStep+'/'+currentSolution.length;
+  if(currentStep<currentSolution.length){
+    document.getElementById('moveDisplay').innerHTML='Next: <span>'+currentSolution[currentStep]+'</span> · Step '+currentStep+'/'+currentSolution.length;
+  } else {
+    document.getElementById('moveDisplay').innerHTML='<span style="color:var(--accent)">✓ Solved!</span>';
+  }
+}
+
+function togglePlay(){
+  isPlaying=!isPlaying;
+  document.getElementById('btnPlay').textContent=isPlaying?'⏸':'▶';
+  if(isPlaying){
+    playInterval=setInterval(()=>{
+      if(currentStep>=currentSolution.length){stopPlay();return;}
+      stepMove(1);
+    },520);
+  } else {clearInterval(playInterval);}
+}
+</script>
 </body>
 </html>
