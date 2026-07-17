@@ -85,6 +85,29 @@ canvas{display:block;}
 .scheme-row select{flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px;font-family:'Oswald',sans-serif;font-size:12px;}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ═══════════════════════════════════════════════
+   MOBILE — stack the cube viewer above the controls
+   instead of the fixed 340px side-by-side desktop grid,
+   which left almost no room for the viewer on narrow
+   screens (it was the controls panel eating ~340px of
+   a ~375-428px viewport).
+   ═══════════════════════════════════════════════ */
+@media (max-width: 860px){
+  body{overflow-y:auto;overflow-x:hidden;height:auto;}
+  header{padding:12px 16px;flex-wrap:wrap;row-gap:8px;}
+  header h1{font-size:16px;}
+  .tag{font-size:9px;padding:2px 7px;}
+  .main-layout{display:flex;flex-direction:column;height:auto;min-height:calc(100vh - 60px);}
+  .viewer-panel{border-right:none;border-bottom:1px solid var(--border);flex-shrink:0;height:46vh;min-height:280px;}
+  #canvas-container{margin:12px;}
+  .viewer-footer{flex-wrap:wrap;row-gap:4px;padding:8px 14px;}
+  .credit-line{white-space:normal;font-size:11px;width:100%;order:3;}
+  .right-panel{flex:none;overflow:visible;}
+  .tab-content{overflow-y:visible;padding:14px;}
+  .faces-wrap{gap:6px;}
+  .sticker{min-height:22px;}
+}
 </style>
 </head>
 <body>
@@ -100,7 +123,7 @@ canvas{display:block;}
     <div class="viewer-footer">
       <div class="move-display" id="moveDisplay">Drag to rotate · Scramble &amp; Solve</div>
       <div id="stepCounter" style="font-size:11px;color:var(--muted)"></div>
-      <div style="font-size:13px;color:var(--muted);white-space:nowrap;opacity:.85;">Designed by Shayan Mysore, vibe coded with Claude! Enchanté ✨</div>
+      <div class="credit-line" style="font-size:13px;color:var(--muted);white-space:nowrap;opacity:.85;">Designed by Shayan Mysore, vibe coded with Claude! Enchanté ✨</div>
     </div>
   </div>
   <div class="right-panel">
